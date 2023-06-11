@@ -152,7 +152,7 @@ app.post("/form", upload.single("profileImg"), async (req, res) => {
         status: req.body["status"],
         profile: req.file
           ? url + "/public/" + req.file.filename
-          : url + "/public/default.png",
+          : url + "/public/default.jpg",
         location: req.body["location"],
       });
       await user.save();
