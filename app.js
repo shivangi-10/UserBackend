@@ -1,0 +1,158 @@
+var express = require("express");
+var mongoose = require("mongoose");
+var bodyParser = require("body-parser");
+var converter = require("json-2-csv");
+var UserModel = require("./mongo");
+
+var app = express();
+const ConnectDb = async () => {
+  await mongoose
+    .connect(
+      "mongodb+srv://Shivangi1010:shivangi10@cluster0.wxfe922.mongodb.net/?retryWrites=true&w=majority"
+    )
+    .then(() => console.log("db connected"));
+
+  app.listen(8000);
+};
+
+app.use("/", (req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "*");
+  res.setHeader("Access-Control-Allow-Methods", "*");
+  next();
+});
+app.use(bodyParser.json());
+
+app.get("/", async (req, res) => {
+  res.setHeader("Content-type", "application/json");
+  let users;
+  if (req.query.search) {
+    users = await UserModel.find(
+      {
+        $or: [
+          {
+            firstname: { $regex: req.query.search, $options: "i" },
+          },
+          {
+            lastname: { $regex: req.query.search, $options: "i" },
+          },
+          {
+            email: { $regex: req.query.search, $options: "i" },
+          },
+        ],
+      },
+      null
+    );
+  } else {
+    users = await UserModel.find({}, null);
+  }
+  res.send({ users: users });
+});
+
+app.get("/export", async (req, res) => {
+  users = await UserModel.aggregate([
+    {
+      $match: {
+        $or: [
+          {
+            firstname: { $regex: req.query.search, $options: "i" },
+          },
+          {
+            lastname: { $regex: req.query.search, $options: "i" },
+          },
+          {
+            email: { $regex: req.query.search, $options: "i" },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        firstname: 1,
+        lastname: 1,
+        email: 1,
+        mobile: 1,
+        gender: 1,
+        status: 1,
+        location: 1,
+      },
+    },
+  ]);
+  const data = await converter.json2csv(users);
+  res.attachment("users.csv");
+  res.status(200).send(data);
+});
+
+app.get("/view", async (req, res) => {
+  res.setHeader("Content-type", "application/json");
+  const user = await UserModel.findOne({ _id: req.query._id });
+  res.send({ user: user });
+});
+
+app.post("/form", async (req, res) => {
+  res.setHeader("Content-type", "application/json");
+  if (req.body) {
+    if (req.query._id) {
+      const user = {
+        firstname: req.body["firstname"],
+        lastname: req.body["lastname"],
+        email: req.body["email"],
+        mobile: req.body["mobile"],
+        gender: req.body["gender"],
+        status: req.body["status"],
+        profile: req.body["profile"],
+        location: req.body["location"],
+      };
+      await UserModel.findByIdAndUpdate(req.query._id, user);
+
+      res.status(200).send(" user edited successfully");
+    } else {
+      const user = new UserModel({
+        firstname: req.body["firstname"],
+        lastname: req.body["lastname"],
+        email: req.body["email"],
+        mobile: req.body["mobile"],
+        gender: req.body["gender"],
+        status: req.body["status"],
+        profile: req.body["profile"],
+        location: req.body["location"],
+      });
+      await user.save();
+      res.status(200).send("new user saved successfully");
+    }
+  } else {
+    res.status(404).send("user not saved");
+  }
+});
+
+app.post("/form", async (req, res) => {
+  res.setHeader("Content-type", "application/json");
+  if (req.body) {
+    const user = {
+      firstname: req.body["first"],
+      lastname: req.body["last"],
+      email: req.body["email"],
+      mobile: req.body["mobile"],
+      gender: req.body["gender"],
+      status: req.body["status"],
+      profile: req.body["profile"],
+      location: req.body["location"],
+    };
+    await UserModel.findByIdAndUpdate(req.query._id, user);
+
+    res.status(200).send("new user saved successfully");
+  } else {
+    res.status(404).send("user not saved");
+  }
+});
+
+app.delete("/delete", async (req, res) => {
+  if (req.body) {
+    await UserModel.findByIdAndDelete(req.body.id);
+    res.status(200).send("user deleted successfully");
+  } else {
+    res.status(200).send("user not found");
+  }
+});
+ConnectDb();
