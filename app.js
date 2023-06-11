@@ -25,7 +25,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const fileName = file.originalname.toLowerCase().split(" ").join("-");
-    cb(null, uuidv4() + "-" + fileName);
+    cb(null, uuidv4.v4() + "-" + fileName);
   },
 });
 
@@ -134,9 +134,11 @@ app.post("/form", upload.single("profileImg"), async (req, res) => {
         mobile: req.body["mobile"],
         gender: req.body["gender"],
         status: req.body["status"],
-        profile: url + "/public/" + req.body["profile"],
         location: req.body["location"],
       };
+      if (req.file) {
+        user["profile"] = url + "/public/" + req.file.filename;
+      }
       await UserModel.findByIdAndUpdate(req.query._id, user);
 
       res.status(200).send(" user edited successfully");
@@ -148,7 +150,9 @@ app.post("/form", upload.single("profileImg"), async (req, res) => {
         mobile: req.body["mobile"],
         gender: req.body["gender"],
         status: req.body["status"],
-        profile: url + "/public/" + req.body["profile"],
+        profile: req.file
+          ? url + "/public/" + req.file.filename
+          : url + "/public/default.png",
         location: req.body["location"],
       });
       await user.save();
@@ -158,27 +162,6 @@ app.post("/form", upload.single("profileImg"), async (req, res) => {
     res.status(404).send("user not saved");
   }
 });
-
-// app.post("/form", async (req, res) => {
-//   res.setHeader("Content-type", "application/json");
-//   if (req.body) {
-//     const user = {
-//       firstname: req.body["first"],
-//       lastname: req.body["last"],
-//       email: req.body["email"],
-//       mobile: req.body["mobile"],
-//       gender: req.body["gender"],
-//       status: req.body["status"],
-//       profile: req.body["profile"],
-//       location: req.body["location"],
-//     };
-//     await UserModel.findByIdAndUpdate(req.query._id, user);
-
-//     res.status(200).send("new user saved successfully");
-//   } else {
-//     res.status(404).send("user not saved");
-//   }
-// });
 
 app.delete("/delete", async (req, res) => {
   if (req.body) {
