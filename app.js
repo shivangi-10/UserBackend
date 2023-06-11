@@ -51,18 +51,19 @@ app.get("/", async (req, res) => {
 });
 
 app.get("/export", async (req, res) => {
+  const search = req.query.search ? req.query.search : ".*"
   users = await UserModel.aggregate([
     {
       $match: {
         $or: [
           {
-            firstname: { $regex: req.query.search, $options: "i" },
+            firstname: { $regex: search, $options: "i" },
           },
           {
-            lastname: { $regex: req.query.search, $options: "i" },
+            lastname: { $regex: search, $options: "i" },
           },
           {
-            email: { $regex: req.query.search, $options: "i" },
+            email: { $regex: search, $options: "i" },
           },
         ],
       },
