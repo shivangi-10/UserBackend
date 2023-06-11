@@ -2,8 +2,11 @@ var express = require("express");
 var mongoose = require("mongoose");
 var bodyParser = require("body-parser");
 var converter = require("json-2-csv");
+var multer = require("multer");
+var uuidv4 = require("uuid");
 var UserModel = require("./mongo");
-const PORT = process.env.PORT || 8000
+const PORT = process.env.PORT || 8000;
+const DIR = "./public/";
 
 var app = express();
 const ConnectDb = async () => {
@@ -16,6 +19,33 @@ const ConnectDb = async () => {
   app.listen(PORT);
 };
 
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, DIR);
+  },
+  filename: (req, file, cb) => {
+    const fileName = file.originalname.toLowerCase().split(" ").join("-");
+    cb(null, uuidv4() + "-" + fileName);
+  },
+});
+
+var upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    if (
+      file.mimetype == "image/png" ||
+      file.mimetype == "image/jpg" ||
+      file.mimetype == "image/jpeg"
+    ) {
+      cb(null, true);
+    } else {
+      cb(null, false);
+      return cb(new Error("Only .png, .jpg and .jpeg format allowed!"));
+    }
+  },
+});
+
+app.use("/public", express.static("public"));
 app.use("/", (req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "*");
@@ -51,7 +81,7 @@ app.get("/", async (req, res) => {
 });
 
 app.get("/export", async (req, res) => {
-  const search = req.query.search ? req.query.search : ".*"
+  const search = req.query.search ? req.query.search : ".*";
   users = await UserModel.aggregate([
     {
       $match: {
@@ -92,7 +122,8 @@ app.get("/view", async (req, res) => {
   res.send({ user: user });
 });
 
-app.post("/form", async (req, res) => {
+app.post("/form", upload.single("profileImg"), async (req, res) => {
+  const url = req.protocol + "://" + req.get("host");
   res.setHeader("Content-type", "application/json");
   if (req.body) {
     if (req.query._id) {
@@ -103,7 +134,7 @@ app.post("/form", async (req, res) => {
         mobile: req.body["mobile"],
         gender: req.body["gender"],
         status: req.body["status"],
-        profile: req.body["profile"],
+        profile: url + "/public/" + req.body["profile"],
         location: req.body["location"],
       };
       await UserModel.findByIdAndUpdate(req.query._id, user);
@@ -117,7 +148,7 @@ app.post("/form", async (req, res) => {
         mobile: req.body["mobile"],
         gender: req.body["gender"],
         status: req.body["status"],
-        profile: req.body["profile"],
+        profile: url + "/public/" + req.body["profile"],
         location: req.body["location"],
       });
       await user.save();
@@ -128,26 +159,26 @@ app.post("/form", async (req, res) => {
   }
 });
 
-app.post("/form", async (req, res) => {
-  res.setHeader("Content-type", "application/json");
-  if (req.body) {
-    const user = {
-      firstname: req.body["first"],
-      lastname: req.body["last"],
-      email: req.body["email"],
-      mobile: req.body["mobile"],
-      gender: req.body["gender"],
-      status: req.body["status"],
-      profile: req.body["profile"],
-      location: req.body["location"],
-    };
-    await UserModel.findByIdAndUpdate(req.query._id, user);
+// app.post("/form", async (req, res) => {
+//   res.setHeader("Content-type", "application/json");
+//   if (req.body) {
+//     const user = {
+//       firstname: req.body["first"],
+//       lastname: req.body["last"],
+//       email: req.body["email"],
+//       mobile: req.body["mobile"],
+//       gender: req.body["gender"],
+//       status: req.body["status"],
+//       profile: req.body["profile"],
+//       location: req.body["location"],
+//     };
+//     await UserModel.findByIdAndUpdate(req.query._id, user);
 
-    res.status(200).send("new user saved successfully");
-  } else {
-    res.status(404).send("user not saved");
-  }
-});
+//     res.status(200).send("new user saved successfully");
+//   } else {
+//     res.status(404).send("user not saved");
+//   }
+// });
 
 app.delete("/delete", async (req, res) => {
   if (req.body) {
