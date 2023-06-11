@@ -3,6 +3,7 @@ var mongoose = require("mongoose");
 var bodyParser = require("body-parser");
 var converter = require("json-2-csv");
 var UserModel = require("./mongo");
+const PORT = process.env.PORT || 8000
 
 var app = express();
 const ConnectDb = async () => {
@@ -12,7 +13,7 @@ const ConnectDb = async () => {
     )
     .then(() => console.log("db connected"));
 
-  app.listen(8000);
+  app.listen(PORT);
 };
 
 app.use("/", (req, res, next) => {
